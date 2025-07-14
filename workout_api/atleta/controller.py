@@ -4,7 +4,7 @@ from fastapi import APIRouter, Body, HTTPException, Query, status
 from pydantic import UUID4
 from typing import Optional
 
-from workout_api.atleta.schemas import AtletaIn, AtletaOut, AtletaUpdate
+from workout_api.atleta.schemas import AtletaIn, AtletaOut, AtletaUpdate, AtletaResumo
 from workout_api.atleta.models import AtletaModel
 from workout_api.categorias.models import CategoriaModel
 from workout_api.centro_treinamento.models import CentroTreinamentoModel
@@ -75,11 +75,11 @@ async def post(
     '/', 
     summary='Consultar todos os Atletas',
     status_code=status.HTTP_200_OK,
-    response_model=list[AtletaOut],
+    response_model=list[AtletaResumo],
 )
 async def query(db_session: DatabaseDependency,
                 nome: Optional[str] = Query(None, description="nome do atleta"),
-                cpf: Optional[str] = Query(None, description="cpf do atleta")) -> list[AtletaOut]:
+                cpf: Optional[str] = Query(None, description="cpf do atleta")) -> list[AtletaResumo]:
     select = select(AtletaModel)
 
     if nome:
@@ -89,7 +89,13 @@ async def query(db_session: DatabaseDependency,
 
     atletas: (await db_session.execute(select)).scalars().all()
 
-    return [AtletaOut.model_validate(atleta) for atleta in atletas]
+    return [
+        AtletaResumo(nome = atleta.nome, 
+                     centro_treinamento = atleta.centro_treinamento,
+                     categoria = atleta.categoria
+        )
+        for atleta in atletas
+    ]
 
 
 @router.get(
