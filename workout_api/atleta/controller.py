@@ -1,6 +1,7 @@
 from datetime import datetime
 from uuid import uuid4
 from fastapi import APIRouter, Body, HTTPException, Query, status
+from fastapi_pagination import LimitOffsetPage, paginate
 from pydantic import UUID4
 from typing import Optional
 
@@ -75,11 +76,11 @@ async def post(
     '/', 
     summary='Consultar todos os Atletas',
     status_code=status.HTTP_200_OK,
-    response_model=list[AtletaResumo],
+    response_model=LimitOffsetPage[AtletaResumo],
 )
 async def query(db_session: DatabaseDependency,
                 nome: Optional[str] = Query(None, description="nome do atleta"),
-                cpf: Optional[str] = Query(None, description="cpf do atleta")) -> list[AtletaResumo]:
+                cpf: Optional[str] = Query(None, description="cpf do atleta")) -> LimitOffsetPage[AtletaResumo]:
     select = select(AtletaModel)
 
     if nome:
@@ -89,13 +90,13 @@ async def query(db_session: DatabaseDependency,
 
     atletas: (await db_session.execute(select)).scalars().all()
 
-    return [
+    return paginate([
         AtletaResumo(nome = atleta.nome, 
                      centro_treinamento = atleta.centro_treinamento,
                      categoria = atleta.categoria
         )
         for atleta in atletas
-    ]
+    ])
 
 
 @router.get(
